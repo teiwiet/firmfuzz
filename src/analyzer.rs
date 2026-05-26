@@ -1,4 +1,7 @@
 use std::{fs,path::{Path,PathBuf}};
+use serde::{Serialize,Deserialize};
+use goblin::elf::*;
+#[derive(Debug,Clone,Serialize,Deserialize)]
 enum Arch{
     X86,
     X86_64,
@@ -23,6 +26,7 @@ impl Arch{
     }
 }
 
+#[derive(Debug,Clone,Serialize,Deserialize)]
 pub struct BinaryReport{
     path : PathBuf,
     danger_func : Vec<String>,
@@ -51,3 +55,35 @@ const INPUT_FUNC : &[&str] = &[
     "getevn",
     "fgets"
 ];
+
+fn extract_names(elf: &Elf)-> Vec<String>{
+    let mut names = vec![];
+
+    for sym in &elf.dynsyms {
+        if let Some(name) = elf.dynstrtab.get_at(sym.st_name){
+            if !name.is_empty(){
+                names.push(name.to_string());
+            }
+        }
+    }
+    for sym in &elf.syms {
+        if let Some(name) = elf.strtab.get_at(sym.st_name){
+            if !name.is_empty(){
+                names.push(name.to_string());
+            }
+        }
+    }
+    names
+}
+
+fn analyze_binary(path : &Path) -> Option<BinaryReport>{
+    let data = fs::read(&path).ok()?;
+    let elf = Elf::parse(&data).ok()?;
+
+    let arch = Arch::from_elf_machine(elf.header.e_machine);
+
+    let all_names : Vec<String> = extract_names(&elf);
+
+
+    todo!()
+}
