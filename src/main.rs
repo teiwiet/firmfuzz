@@ -3,25 +3,26 @@ mod harness;
 mod mutator;
 mod fuzzer;
 
-use harness::Harness;
-use fuzzer::Fuzzer;
+use std::env;
+use analyzer::analyze_binary;
+use std::path::Path;
 
 fn main() {
-    let harness = Harness::new(
-        "./test_target",
-        2000,
-    );
+    let args: Vec<String> = env::args().collect();
 
-    let seeds = vec![
-        b"hi\n".to_vec(),
-        b"ok\n".to_vec(),
-    ];
+    if args.len() < 2 {
+        println!("Usage: {} <binary_path>", args[0]);
+        return;
+    }
 
-    let mut fuzzer = Fuzzer::new(harness, "./crashes", seeds);
-
-    println!("[*] Starting fuzzer on test_target (native)");
-    println!("[*] Crashes will be saved to ./crashes/");
-    println!("[*] Running 100,000 iterations...\n");
-
-    fuzzer.run(100_000);
+    let path = Path::new(&args[1]);
+    match analyze_binary(path) {
+        Some(report) => {
+            println!("Path: {:?}", report.path);
+            println!("Score: {}", report.score);
+            println!("Danger funcs: {:?}", report.danger_funcs);
+            println!("Input funcs: {:?}", report.input_funcs);
+        }
+        None => println!("No interesting functions found"),
+    }
 }

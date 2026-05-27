@@ -1,5 +1,7 @@
 use goblin::elf::*;
+use walkdir::WalkDir;
 use serde::{Deserialize, Serialize};
+use rayon::prelude::*;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -31,11 +33,11 @@ impl Arch {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BinaryReport {
-    path: PathBuf,
-    danger_funcs: Vec<String>,
-    input_funcs: Vec<String>,
-    arch: Arch,
-    score: u32,
+    pub path: PathBuf,
+    pub danger_funcs: Vec<String>,
+    pub input_funcs: Vec<String>,
+    pub arch: Arch,
+    pub score: u32,
 }
 
 const DANGER_FUNCS: &[&str] = &[
@@ -66,7 +68,7 @@ fn extract_names(elf: &Elf) -> Vec<String> {
     names
 }
 
-fn analyze_binary(path: &Path) -> Option<BinaryReport> {
+pub fn analyze_binary(path: &Path) -> Option<BinaryReport> {
     let data = fs::read(&path).ok()?;
     let elf = Elf::parse(&data).ok()?;
 
@@ -98,4 +100,23 @@ fn analyze_binary(path: &Path) -> Option<BinaryReport> {
         input_funcs,
         score
     })
+
+
+}
+pub fn scan_directory(dir: &Path) -> Vec<BinaryReport> {
+    let paths: Vec<_> = WalkDir::new(dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .map(|e| e.path().to_path_buf())
+        .collect();
+
+    let mut reports: Vec<BinaryReport> = paths
+        .par_iter()
+        .filter_map(|p| analyze_binary(p))
+        .collect();
+
+    // Sort theo score cao nhất
+    reports.sort_by(|a, b| b.score.cmp(&a.score));
+    reports
 }
