@@ -9,7 +9,7 @@ use fuzzer::Fuzzer;
 fn main() {
     let harness = Harness::new(
         "qemu-mips",
-        vec!["-L", "/home/teiwiet/firmwares/tplink/_tplink.bin.extracted/squashfs-root", "bin/busybox", "cat"],
+        vec!["-L", "/home/teiwiet/firmwares/tplink/_tplink.bin.extracted/squashfs-root", "bin/busybox", "sh"],
         2000,
     );
 
